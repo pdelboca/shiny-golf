@@ -6,12 +6,12 @@ library(lubridate)
 
 get_cards <- function(){
   gs_title("datos_golf") %>%
-    gs_read("Tarjetas") %>%
-    select("Fecha":"18") %>%
-    gather("Hole", "Shots", "1":"18") %>%
-    mutate(Fecha = dmy(Fecha),
-           Hole = as.numeric(Hole)) %>%
-    arrange(Fecha, Cancha, Hole)
+    gs_read("cards") %>%
+    select("date":"18") %>%
+    gather("hole", "shots", "1":"18") %>%
+    mutate(date = dmy(date),
+           hole = as.numeric(hole)) %>%
+    arrange(date, course, hole)
 }
 
 cards <- get_cards()

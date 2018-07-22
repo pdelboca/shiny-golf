@@ -29,11 +29,11 @@ ui <- fluidPage(
 # Define server logic ----
 server <- function(input, output) {
   scores <- cards %>%
-    group_by(Fecha) %>%
-    summarise(Total = sum(Shots, na.rm = TRUE)) 
+    group_by(date) %>%
+    summarise(total = sum(shots, na.rm = TRUE))
   
   scoresTS <- scores %>%
-    xts(x = .$Total, order.by = .$Fecha)
+    xts(x = .$total, order.by = .$date)
   
   output$historicScores <- renderDygraph({
     dygraph(scoresTS, main = "Total Scores per Date (for 9 Holes)") %>%
@@ -42,7 +42,9 @@ server <- function(input, output) {
       dyOptions(axisLineWidth = 1.5, fillGraph = TRUE, drawGrid = FALSE, drawPoints = TRUE, pointSize = 3)
   })
   
-  output$historicTable <- renderTable(tail(scores),10)
+  output$historicTable <- renderTable(
+    scores %>% mutate(date = as.character(date)) # Needed due to a bug
+    )
 }
 
 # Run the app ----
