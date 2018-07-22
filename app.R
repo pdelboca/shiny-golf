@@ -1,4 +1,7 @@
 library(shiny)
+library(dygraphs)
+library(xts)
+
 source("data/golf_data.R")
 
 # Define UI ----
@@ -15,17 +18,26 @@ ui <- fluidPage(
       
     ,width = 2),
     mainPanel(
-      plotOutput("historicScores")
-      , width = 10
-    )
+      fluidRow(
+        column(dygraphOutput("historicScores"), width = 10),
+        column(tableOutput("historicTable"), width = 2)
+      )
+    , width = 8)
   )
 )
 
 # Define server logic ----
 server <- function(input, output) {
-  output$historicScores <- renderPlot(
-    hist(rnorm(100))
-  )
+  scoresTS <- cards %>%
+    group_by(Fecha) %>%
+    summarise(Total = sum(Shots, na.rm = TRUE)) %>%
+    xts(.$Fecha, .$Total)
+  
+  output$historicScores <- renderDygraph({
+    dygraph(scoresTS, main = "Total Scores per Date (for 9 Holes)")
+  })
+  
+  output$historicTable <- renderTable(scoresTS)
 }
 
 # Run the app ----
