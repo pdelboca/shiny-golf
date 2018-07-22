@@ -28,16 +28,21 @@ ui <- fluidPage(
 
 # Define server logic ----
 server <- function(input, output) {
-  scoresTS <- cards %>%
+  scores <- cards %>%
     group_by(Fecha) %>%
-    summarise(Total = sum(Shots, na.rm = TRUE)) %>%
-    xts(.$Fecha, .$Total)
+    summarise(Total = sum(Shots, na.rm = TRUE)) 
+  
+  scoresTS <- scores %>%
+    xts(x = .$Total, order.by = .$Fecha)
   
   output$historicScores <- renderDygraph({
-    dygraph(scoresTS, main = "Total Scores per Date (for 9 Holes)")
+    dygraph(scoresTS, main = "Total Scores per Date (for 9 Holes)") %>%
+      dySeries("V1", label = "Score") %>%
+      dyAxis("y", label = "Score (Total Hits)", valueRange = c(0, 100)) %>%
+      dyOptions(axisLineWidth = 1.5, fillGraph = TRUE, drawGrid = FALSE, drawPoints = TRUE, pointSize = 3)
   })
   
-  output$historicTable <- renderTable(scoresTS)
+  output$historicTable <- renderTable(tail(scores),10)
 }
 
 # Run the app ----
