@@ -14,7 +14,7 @@ ui <- fluidPage(
                 "Date"),
       selectInput("course",
                   "Golf Course",
-                  c("Alta Gracia Golf Club", "San Miguel"))
+                  c("All", cards$course))
       
     ,width = 2),
     mainPanel(
@@ -28,22 +28,24 @@ ui <- fluidPage(
 
 # Define server logic ----
 server <- function(input, output) {
-  scores <- cards %>%
-    group_by(date) %>%
-    summarise(total = sum(shots, na.rm = TRUE))
   
-  scoresTS <- scores %>%
-    xts(x = .$total, order.by = .$date)
+  scores <- reactive({
+    cards %>%
+    group_by(date) %>%
+    filter(if(input$course != "All") course == input$course else TRUE) %>%
+    summarise(total = sum(shots, na.rm = TRUE))})
   
   output$historicScores <- renderDygraph({
-    dygraph(scoresTS, main = "Total Scores per Date (for 9 Holes)") %>%
+    scores() %>% 
+    xts(x = .$total, order.by = .$date) %>%
+    dygraph(main = "Total Scores per Date (for 9 Holes)") %>%
       dySeries("V1", label = "Score") %>%
       dyAxis("y", label = "Score (Total Hits)", valueRange = c(0, 100)) %>%
       dyOptions(axisLineWidth = 1.5, fillGraph = TRUE, drawGrid = FALSE, drawPoints = TRUE, pointSize = 3)
   })
   
   output$historicTable <- renderTable(
-    scores %>% mutate(date = as.character(date)) # Needed due to a bug
+    scores() %>% mutate(date = as.character(date)) # Needed due to a bug
     )
 }
 
