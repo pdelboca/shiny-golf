@@ -1,6 +1,10 @@
 library(shiny)
 library(dygraphs)
 library(xts)
+library(googlesheets)
+library(dplyr)
+library(tidyr)
+library(lubridate)
 
 source("data/golf_data.R")
 
@@ -19,10 +23,10 @@ ui <- fluidPage(
     ,width = 2),
     mainPanel(
       fluidRow(
-        column(dygraphOutput("historicScores"), width = 10),
-        column(tableOutput("historicTable"), width = 2)
+        column(dygraphOutput("historicScores"), width = 8),
+        column(tableOutput("historicTable"), width = 4)
       )
-    , width = 8)
+    , width = 10)
   )
 )
 
@@ -31,9 +35,11 @@ server <- function(input, output) {
   
   scores <- reactive({
     cards %>%
-    group_by(date) %>%
+    group_by(date, course) %>% # TODO: Review if multiple matchs in 1 day
     filter(if(input$course != "All") course == input$course else TRUE) %>%
-    summarise(total = sum(shots, na.rm = TRUE))})
+    summarise(total = sum(shots, na.rm = TRUE)) %>%
+    ungroup()
+    }) 
   
   output$historicScores <- renderDygraph({
     scores() %>% 
