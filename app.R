@@ -31,7 +31,6 @@ ui <- dashboardPage(
   )
 )
 
-# Define server logic ----
 server <- function(input, output) {
   output$totalCourses <- renderValueBox({
     valueBox(
@@ -53,7 +52,7 @@ server <- function(input, output) {
   
   output$totalShots <- renderValueBox({
     valueBox(
-      sum(cards$shots, na.rm = TRUE), "Total Shots")
+      sum(cards$shots, na.rm = TRUE), "Total Shots"
     )
   })
   
