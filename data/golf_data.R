@@ -10,3 +10,13 @@ get_cards <- function(){
 }
 
 cards <- get_cards()
+
+get_courses <- function(){
+  gs_title("datos_golf") %>%
+    gs_read("courses") %>%
+    select("course":"18") %>%
+    gather("hole", "par", "1":"18") %>%
+    arrange(course, hole)
+}
+
+courses <- get_courses()
