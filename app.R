@@ -7,6 +7,8 @@ library(dplyr)
 library(tidyr)
 library(lubridate)
 library(ggplot2)
+library(ggmap)
+
 source("data/golf_data.R")
 
 ui <- dashboardPage(
@@ -56,7 +58,9 @@ ui <- dashboardPage(
       fluidRow(box(
         selectInput("courseInput", "Select Course:", courses$course, selected = "ALL"),
         width = 2
-      )),
+      ),
+      box(plotOutput("courseMap"),title = "Course Map", width = 3)
+      ),
       fluidRow(
         valueBoxOutput("courseTotalGames", width = 2),
         valueBoxOutput("courseTotalHoles", width = 2),
@@ -191,6 +195,24 @@ server <- function(input, output) {
         subtitle = "Historic dispersion of shots for each hole"
       ) +
       theme_minimal()
+  })
+  
+  coursesLocation <- reactive({
+    courses_location %>%
+      filter(course == input$courseInput)
+  })
+  
+  output$courseMap <- renderPlot({
+    get_map(location = c(lon=coursesLocation()$lon,lat=coursesLocation()$lat), 
+            zoom = coursesLocation()$map_zoom, 
+            maptype = "satellite") %>%
+      ggmap() + theme_minimal() +
+      theme(axis.title.x=element_blank(),
+            axis.text.x=element_blank(),
+            axis.ticks.x=element_blank(),
+            axis.title.y=element_blank(),
+            axis.text.y=element_blank(),
+            axis.ticks.y=element_blank())
   })
 }
 

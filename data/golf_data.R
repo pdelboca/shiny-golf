@@ -21,3 +21,11 @@ get_courses <- function(){
 }
 
 courses <- get_courses()
+
+get_course_location <- function(){
+  gs_title("datos_golf") %>%
+    gs_read("courses") %>%
+    select(course, lat, lon, map_zoom)
+}
+
+courses_location <-get_course_location()
