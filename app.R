@@ -6,51 +6,72 @@ library(googlesheets)
 library(dplyr)
 library(tidyr)
 library(lubridate)
+library(purrr)
 
 source("data/golf_data.R")
 
 ui <- dashboardPage(
   dashboardHeader(title = "Personal Golf Statistics"),
-  dashboardSidebar(
-    sidebarMenu(
-    menuItem("Historic Data", tabName = "historicData", icon = icon("dashboard")),
-    menuItem("Course Statistics", tabName = "courseStatistics", icon = icon("th"))
+  dashboardSidebar(sidebarMenu(
+    menuItem(
+      "Historic Data",
+      tabName = "historicData",
+      icon = icon("dashboard")
+    ),
+    menuItem(
+      "Course Statistics",
+      tabName = "courseStatistics",
+      icon = icon("th")
     )
-  ),
-  dashboardBody(
-    tabItems(
-      tabItem(tabName = "historicData",
-          fluidRow(
-            valueBoxOutput("totalCourses", width = 2),
-            valueBoxOutput("totalGames", width = 2),
-            valueBoxOutput("totalHoles", width = 2),
-            valueBoxOutput("totalShots", width = 2),
-            valueBoxOutput("avgShots", width = 2),
-            valueBoxOutput("daysSince", width = 2)
-          ),
-          fluidRow(
-            box(dygraphOutput("historicScores"), width = 8),
-            box(
-              tableOutput("historicTable"),
-              title = "Last 10 Games",
-              width = 4
-            )
-          ),
-          fluidRow(box(
-            tableOutput("historicCards"),
-            title = "Historic Cards",
-            width = 12
-          ))
-        
+  )),
+  dashboardBody(tabItems(
+    # Historic Data Tab -----------------------------------------------------
+    tabItem(
+      tabName = "historicData",
+      fluidRow(
+        valueBoxOutput("totalCourses", width = 2),
+        valueBoxOutput("totalGames", width = 2),
+        valueBoxOutput("totalHoles", width = 2),
+        valueBoxOutput("totalShots", width = 2),
+        valueBoxOutput("avgShots", width = 2),
+        valueBoxOutput("daysSince", width = 2)
       ),
-      tabItem(tabName = "courseStatistics",
-              h2("Course Statistics")
-              )
+      fluidRow(
+        box(dygraphOutput("historicScores"), width = 8),
+        box(
+          tableOutput("historicTable"),
+          title = "Last 10 Games",
+          width = 4
+        )
+      ),
+      fluidRow(box(
+        tableOutput("historicCards"),
+        title = "Historic Cards",
+        width = 12
+      ))
+      
+    ),
+    # Course Statistics Tab -----------------------------------------------------
+    tabItem(
+      tabName = "courseStatistics",
+      fluidRow(box(
+        selectInput("courseInput", "Select Course:", courses$course, selected = "ALL"),
+        width = 2
+      )),
+      fluidRow(
+        valueBoxOutput("courseTotalGames", width = 2),
+        valueBoxOutput("courseTotalHoles", width = 2),
+        valueBoxOutput("courseTotalShots", width = 2),
+        valueBoxOutput("courseAvgShots", width = 2),
+        valueBoxOutput("courseDaysSince", width = 2)
+      )
     )
-  )
+  ))
 )
 
 server <- function(input, output) {
+  # Historic Data Tab -----------------------------------------------------
+  
   output$totalCourses <- renderValueBox({
     valueBox(length(unique(courses$course)), "Courses")
   })
@@ -83,7 +104,6 @@ server <- function(input, output) {
   scores <- reactive({
     cards %>%
       group_by(date, course) %>% # TODO: Review if multiple matchs in 1 day
-      #filter(if(input$course != "All") course == input$course else TRUE) %>%
       summarise(holes = sum(!is.na(shots)),
                 total = sum(shots, na.rm = TRUE)) %>%
       ungroup()
@@ -121,6 +141,40 @@ server <- function(input, output) {
       mutate(total_shots = rowSums(select_if(., is.numeric), na.rm = TRUE)),
     width = "100%"
   )
+  
+  # Course Statistics Tab -----------------------------------------------------
+  
+  courseData <- reactive({
+    courseData <- cards %>%
+      left_join(courses) %>%
+      filter(course == input$courseInput)
+    courseData
+  })
+  
+  output$courseTotalGames <- renderValueBox({
+    valueBox(length(unique(courseData()$date)), "Games Played")
+  })
+  
+  output$courseTotalHoles <- renderValueBox({
+    valueBox(sum(!is.na(courseData()$shots)), "Holes Played")
+  })
+  
+  output$courseTotalShots <- renderValueBox({
+    valueBox(sum(courseData()$shots, na.rm = TRUE), "Total Shots")
+  })
+  
+  output$courseAvgShots <- renderValueBox({
+    avgShots <- courseData() %>%
+      group_by(date) %>%
+      summarise(sum = sum(shots, na.rm = TRUE)) %>%
+      summarise(avg = mean(sum))
+    valueBox(avgShots$avg, "Avg Shots per Game")
+  })
+  
+  output$courseDaysSince <- renderValueBox({
+    daysSince <- Sys.Date() - max(courseData()$date)
+    valueBox(daysSince, "Days Since Last Game")
+  })
 }
 
 # Run the app ----

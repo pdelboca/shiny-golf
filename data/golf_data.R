@@ -16,6 +16,7 @@ get_courses <- function(){
     gs_read("courses") %>%
     select("course":"18") %>%
     gather("hole", "par", "1":"18") %>%
+    mutate(hole = as.numeric(hole)) %>%
     arrange(course, hole)
 }
 
