@@ -6,8 +6,7 @@ library(googlesheets)
 library(dplyr)
 library(tidyr)
 library(lubridate)
-library(purrr)
-
+library(ggplot2)
 source("data/golf_data.R")
 
 ui <- dashboardPage(
@@ -64,7 +63,10 @@ ui <- dashboardPage(
         valueBoxOutput("courseTotalShots", width = 2),
         valueBoxOutput("courseAvgShots", width = 2),
         valueBoxOutput("courseDaysSince", width = 2)
-      )
+      ),
+      fluidRow(box(
+        plotOutput("historicDispersion"), width = 12
+      ))
     )
   ))
 )
@@ -147,6 +149,7 @@ server <- function(input, output) {
   courseData <- reactive({
     courseData <- cards %>%
       left_join(courses) %>%
+      mutate(hole = factor(hole, levels = 1:18)) %>% # For plots
       filter(course == input$courseInput)
     courseData
   })
@@ -174,6 +177,20 @@ server <- function(input, output) {
   output$courseDaysSince <- renderValueBox({
     daysSince <- Sys.Date() - max(courseData()$date)
     valueBox(daysSince, "Days Since Last Game")
+  })
+  
+  output$historicDispersion <- renderPlot({
+    courseData() %>%
+      filter(!is.na(shots)) %>%
+      ggplot(aes(x=hole, y=shots)) + 
+      geom_point(shape="x", size = 3, color = "darkgreen") +
+      geom_point(aes(x=hole,y=par), color="black", size=3) + 
+      scale_y_continuous(limits=c(0,15), breaks=0:15, minor_breaks = FALSE) + 
+      labs(
+        title = "Holes Par vs Holes Shots",
+        subtitle = "Historic dispersion of shots for each hole"
+      ) +
+      theme_minimal()
   })
 }
 
