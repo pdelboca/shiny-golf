@@ -99,7 +99,7 @@ server <- function(input, output) {
       group_by(date) %>%
       summarise(sum = sum(shots, na.rm = TRUE)) %>%
       summarise(avg = mean(sum))
-    valueBox(avgShots$avg, "Avg Shots per Game")
+    valueBox(round(avgShots$avg,2), "Avg Shots per Game")
   })
   
   output$daysSince <- renderValueBox({
@@ -175,7 +175,7 @@ server <- function(input, output) {
       group_by(date) %>%
       summarise(sum = sum(shots, na.rm = TRUE)) %>%
       summarise(avg = mean(sum))
-    valueBox(avgShots$avg, "Avg Shots per Game")
+    valueBox(round(avgShots$avg,2), "Avg Shots per Game")
   })
   
   output$courseDaysSince <- renderValueBox({
