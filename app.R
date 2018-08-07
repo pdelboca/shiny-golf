@@ -8,6 +8,7 @@ library(tidyr)
 library(lubridate)
 library(ggplot2)
 library(ggmap)
+library(leaflet)
 
 source("data/golf_data.R")
 
@@ -59,7 +60,7 @@ ui <- dashboardPage(
         selectInput("courseInput", "Select Course:", courses$course, selected = "ALL"),
         width = 2
       ),
-      box(plotOutput("courseMap"),title = "Course Map", width = 3)
+      box(leafletOutput("courseMap"),title = "Course Map", width = 5)
       ),
       fluidRow(
         valueBoxOutput("courseTotalGames", width = 2),
@@ -202,17 +203,11 @@ server <- function(input, output) {
       filter(course == input$courseInput)
   })
   
-  output$courseMap <- renderPlot({
-    get_map(location = c(lon=coursesLocation()$lon,lat=coursesLocation()$lat), 
-            zoom = coursesLocation()$map_zoom, 
-            maptype = "satellite") %>%
-      ggmap() + theme_minimal() +
-      theme(axis.title.x=element_blank(),
-            axis.text.x=element_blank(),
-            axis.ticks.x=element_blank(),
-            axis.title.y=element_blank(),
-            axis.text.y=element_blank(),
-            axis.ticks.y=element_blank())
+  output$courseMap <- renderLeaflet({
+    leaflet() %>%
+      addProviderTiles(providers$Esri.WorldImagery) %>%
+      addMarkers(lng=coursesLocation()$lon, lat=coursesLocation()$lat, popup=coursesLocation()$course)
+      #setView(lng=coursesLocation()$lon, lat=coursesLocation()$lat, zoom = 16)
   })
 }
 
