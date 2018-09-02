@@ -1,11 +1,15 @@
 # Script to load data from GoogleSheet
 get_cards <- function(){
-  gs_title("datos_golf") %>%
+  tidy_cards <- gs_title("datos_golf") %>%
     gs_read("cards") %>%
-    select("date":"18") %>%
+    mutate(id_game = row_number()) %>%
+    select(id_game, "date":"18") %>%
     gather("hole", "shots", "1":"18") %>%
     mutate(date = dmy(date),
            hole = as.numeric(hole)) %>%
+    group_by(id_game) %>%
+    mutate(holes_played = sum(!is.na(shots))) %>%
+    ungroup() %>%
     arrange(date, course, hole)
 }
 

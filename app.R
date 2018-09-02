@@ -7,7 +7,6 @@ library(dplyr)
 library(tidyr)
 library(lubridate)
 library(ggplot2)
-library(ggmap)
 library(leaflet)
 
 source("data/golf_data.R")
@@ -31,15 +30,16 @@ ui <- dashboardPage(
     tabItem(
       tabName = "historicData",
       fluidRow(
-        valueBoxOutput("totalCourses", width = 2),
         valueBoxOutput("totalGames", width = 2),
         valueBoxOutput("totalHoles", width = 2),
         valueBoxOutput("totalShots", width = 2),
-        valueBoxOutput("avgShots", width = 2),
+        valueBoxOutput("avgShots9Holes", width = 2),
+        valueBoxOutput("avgShots18Holes", width = 2),
         valueBoxOutput("daysSince", width = 2)
       ),
       fluidRow(
-        box(dygraphOutput("historicScores"), width = 8),
+        box(dygraphOutput("historicScores9Holes"), width = 4),
+        box(dygraphOutput("historicScores18Holes"), width = 4),
         box(
           tableOutput("historicTable"),
           title = "Last 10 Games",
@@ -66,7 +66,8 @@ ui <- dashboardPage(
         valueBoxOutput("courseTotalGames", width = 2),
         valueBoxOutput("courseTotalHoles", width = 2),
         valueBoxOutput("courseTotalShots", width = 2),
-        valueBoxOutput("courseAvgShots", width = 2),
+        valueBoxOutput("courseAvgShots9Holes", width = 2),
+        valueBoxOutput("courseAvgShots18Holes", width = 2),
         valueBoxOutput("courseDaysSince", width = 2)
       ),
       fluidRow(box(
@@ -78,11 +79,6 @@ ui <- dashboardPage(
 
 server <- function(input, output) {
   # Historic Data Tab -----------------------------------------------------
-  
-  output$totalCourses <- renderValueBox({
-    valueBox(length(unique(courses$course)), "Courses")
-  })
-  
   output$totalGames <- renderValueBox({
     valueBox(length(unique(cards$date)), "Games Played")
   })
@@ -95,12 +91,22 @@ server <- function(input, output) {
     valueBox(sum(cards$shots, na.rm = TRUE), "Total Shots")
   })
   
-  output$avgShots <- renderValueBox({
+  output$avgShots9Holes <- renderValueBox({
     avgShots <- cards %>%
+      filter(holes_played == 9) %>%
       group_by(date) %>%
       summarise(sum = sum(shots, na.rm = TRUE)) %>%
       summarise(avg = mean(sum))
-    valueBox(round(avgShots$avg,2), "Avg Shots per Game")
+    valueBox(round(avgShots$avg,2), "Avg Shots per Game (9 Holes)")
+  })
+  
+  output$avgShots18Holes <- renderValueBox({
+    avgShots <- cards %>%
+      filter(holes_played == 18) %>%
+      group_by(date) %>%
+      summarise(sum = sum(shots, na.rm = TRUE)) %>%
+      summarise(avg = mean(sum))
+    valueBox(round(avgShots$avg,2), "Avg Shots per Game (18 Holes)")
   })
   
   output$daysSince <- renderValueBox({
@@ -110,16 +116,16 @@ server <- function(input, output) {
   
   scores <- reactive({
     cards %>%
-      group_by(date, course) %>% # TODO: Review if multiple matchs in 1 day
-      summarise(holes = sum(!is.na(shots)),
-                total = sum(shots, na.rm = TRUE)) %>%
+      group_by(date, course, holes_played) %>% # TODO: Review if multiple matchs in 1 day
+      summarise(total = sum(shots, na.rm = TRUE)) %>%
       ungroup()
   })
   
-  output$historicScores <- renderDygraph({
+  output$historicScores9Holes <- renderDygraph({
     scores() %>%
+      filter(holes_played == 9) %>%
       xts(x = .$total, order.by = .$date) %>%
-      dygraph(main = "Total Scores per Date (for 9 Holes)") %>%
+      dygraph(main = "Total Scores per Game (for 9 Holes)") %>%
       dySeries("V1", label = "Score") %>%
       dyAxis("y", label = "Score (Total Hits)", valueRange = c(0, 100)) %>%
       dyOptions(
@@ -131,12 +137,29 @@ server <- function(input, output) {
       )
   })
   
-  output$historicTable <- renderTable(scores() %>%
-                                        arrange(desc(date)) %>%
-                                        head(10) %>%
-                                        mutate(date = as.character(date)),
-                                      # Needed due to a bug
-                                      width = "100%")
+  output$historicScores18Holes <- renderDygraph({
+    scores() %>%
+      filter(holes_played == 18) %>%
+      xts(x = .$total, order.by = .$date) %>%
+      dygraph(main = "Total Scores per Game (for 18 Holes)") %>%
+      dySeries("V1", label = "Score") %>%
+      dyAxis("y", label = "Score (Total Hits)", valueRange = c(0, 200)) %>%
+      dyOptions(
+        axisLineWidth = 1.5,
+        fillGraph = TRUE,
+        drawGrid = FALSE,
+        drawPoints = TRUE,
+        pointSize = 3
+      )
+  })
+  
+  output$historicTable <- renderTable(
+    scores() %>%
+      arrange(desc(date)) %>%
+      head(10) %>%
+      mutate(date = as.character(date)),
+    width = "100%")
+  
   
   output$historicCards <- renderTable(
     cards %>%
@@ -171,12 +194,22 @@ server <- function(input, output) {
     valueBox(sum(courseData()$shots, na.rm = TRUE), "Total Shots")
   })
   
-  output$courseAvgShots <- renderValueBox({
+  output$courseAvgShots9Holes <- renderValueBox({
     avgShots <- courseData() %>%
+      filter(holes_played == 9) %>%
       group_by(date) %>%
       summarise(sum = sum(shots, na.rm = TRUE)) %>%
       summarise(avg = mean(sum))
-    valueBox(round(avgShots$avg,2), "Avg Shots per Game")
+    valueBox(round(avgShots$avg,2), "Avg Shots per Game (9 Holes)")
+  })
+  
+  output$courseAvgShots18Holes <- renderValueBox({
+    avgShots <- courseData() %>%
+      filter(holes_played == 18) %>%
+      group_by(date) %>%
+      summarise(sum = sum(shots, na.rm = TRUE)) %>%
+      summarise(avg = mean(sum))
+    valueBox(round(avgShots$avg,2), "Avg Shots per Game (18 Holes)")
   })
   
   output$courseDaysSince <- renderValueBox({
