@@ -8,6 +8,7 @@ library(tidyr)
 library(lubridate)
 library(ggplot2)
 library(leaflet)
+library(shinydashboardPlus)
 
 source("data/golf_data.R")
 
@@ -60,7 +61,23 @@ ui <- dashboardPage(
         selectInput("courseInput", "Select Course:", courses$course, selected = "ALL"),
         width = 2
       ),
-      box(leafletOutput("courseMap"),title = "Course Map", width = 5)
+      box(leafletOutput("courseMap"),title = "Course Map", width = 5),
+      gradientBox(
+        title = "Course Historic Games",
+        boxToolSize = "sm",
+        width = 5,
+        collapsible = FALSE,
+        footer = column(
+          width = 12,
+          align = "center",
+          radioButtons(
+            "holesCourseInput",
+            "Holes Played:",
+            choices = list(9, 18)
+          )
+        ),
+        dygraphOutput("historicScoresCourseStatistics")
+      )
       ),
       fluidRow(
         valueBoxOutput("courseTotalGames", width = 2),
@@ -241,6 +258,27 @@ server <- function(input, output) {
       addProviderTiles(providers$Esri.WorldImagery) %>%
       addMarkers(lng=coursesLocation()$lon, lat=coursesLocation()$lat, popup=coursesLocation()$course)
       #setView(lng=coursesLocation()$lon, lat=coursesLocation()$lat, zoom = 16)
+  })
+  
+  output$historicScoresCourseStatistics <- renderDygraph({
+    holes_played_input <- as.integer(input$holesCourseInput)
+
+    courseData() %>%
+      group_by(date, course, holes_played) %>% # TODO: Review if multiple matchs in 1 day
+      summarise(total = sum(shots, na.rm = TRUE)) %>%
+      filter(holes_played == holes_played_input) %>%
+      xts(x = .$total, order.by = .$date) %>%
+      dygraph(main = paste("Total Scores per Game (for", holes_played_input, "Holes)")) %>%
+      dySeries("V1", label = "Score") %>%
+      dyAxis("y", label = "Score (Total Hits)", valueRange = c(0, holes_played_input * 10)) %>%
+      dyOptions(
+        axisLineWidth = 1.5,
+        fillGraph = TRUE,
+        drawGrid = FALSE,
+        drawPoints = TRUE,
+        pointSize = 3
+      )
+    
   })
 }
 
