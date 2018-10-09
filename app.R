@@ -9,6 +9,7 @@ library(lubridate)
 library(ggplot2)
 library(leaflet)
 library(shinydashboardPlus)
+library(zoo)
 
 source("data/golf_data.R")
 
@@ -46,6 +47,15 @@ ui <- dashboardPage(
           title = "Last 10 Games",
           width = 4
         )
+      ),
+      fluidRow(
+        box(
+          title="2018 Goals", width = 4,
+          "My goal for 2018 is to play 4 matches on a row without any 10 on the card."
+        ),
+        infoBoxOutput("goalFulfilled", width = 2),
+        infoBoxOutput("last4GamesAverageShots", width = 2)
+        
       ),
       fluidRow(box(
         tableOutput("historicCards"),
@@ -168,6 +178,28 @@ server <- function(input, output) {
         drawPoints = TRUE,
         pointSize = 3
       )
+  })
+  
+  output$goalFulfilled <- renderInfoBox({
+    worsts <- cards %>%
+      group_by(id_game) %>%
+      summarise(worst_hole_shots = max(shots, na.rm = TRUE))
+    
+    # If there is a sequence of 4 without any 10, return TRUE
+    goal_fulfilled <- any(rollapply(worsts$worst_hole_shots, 4, function(x) !any(x >= 10)))
+    message <- ifelse(goal_fulfilled, "Yes! :D", "Nope! :_D")
+    color <- ifelse(goal_fulfilled, "green", "red")
+    
+    infoBox("Goal Fulfilled?", message , icon = icon("flag"), color = color)
+  })
+  
+  output$last4GamesAverageShots <- renderInfoBox({
+    
+    average_last_4 <- scores() %>%
+      tail(4) %>%
+      summarise(average = mean(total))
+    
+    infoBox("Last 4 Games Avg", average_last_4$average , icon = icon("stats", lib = "glyphicon"))
   })
   
   output$historicTable <- renderTable(
