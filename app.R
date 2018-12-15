@@ -196,6 +196,7 @@ server <- function(input, output) {
   output$last4GamesAverageShots <- renderInfoBox({
     
     average_last_4 <- scores() %>%
+      filter(holes_played == 9) %>%
       tail(4) %>%
       summarise(average = mean(total))
     
