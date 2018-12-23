@@ -94,6 +94,12 @@ ui <- dashboardPage(
         valueBoxOutput("courseAvgShots18Holes", width = 2),
         valueBoxOutput("courseDaysSince", width = 2)
       ),
+      fluidRow(
+        box(radioButtons("holeInput", choices = unique(courses$hole), label = "Select Course Hole: ", inline = TRUE),width = 12)
+      ),
+      fluidRow(
+        box(dygraphOutput("holeStrokesHistory"), width = 6)
+      ),
       fluidRow(box(
         plotOutput("historicDispersion"), width = 12
       ))
@@ -295,6 +301,34 @@ server <- function(input, output) {
       addProviderTiles(providers$Esri.WorldImagery) %>%
       addMarkers(lng=coursesLocation()$lon, lat=coursesLocation()$lat, popup=coursesLocation()$course)
       #setView(lng=coursesLocation()$lon, lat=coursesLocation()$lat, zoom = 16)
+  })
+  
+  output$holeStrokesHistory <- renderDygraph({
+    history <- cards %>% 
+      filter(course == input$courseInput, hole == input$holeInput, !is.na(shots)) %>% 
+      select(date, shots)
+    
+    hole_par <- courses %>% 
+      filter(course == input$courseInput, hole == input$holeInput) %>% 
+      select(par) %>% 
+      unique() %>%
+      as.integer()
+    
+    history %>% 
+      xts(x = .$shots, order.by = .$date) %>%
+      dygraph(main = paste("Strokes for hole", input$holeInput, "at", input$courseInput, "course.")) %>%
+      dySeries("V1", label = "Strokes") %>%
+      dyLimit(hole_par, label = "Par", color = "red") %>% 
+      dyAxis("y", label = "Strokes", valueRange = c(0, max(cards$shots, na.rm = TRUE) + 1)) %>%
+      dyOptions(
+        axisLineWidth = 1.5,
+        fillGraph = TRUE,
+        drawGrid = FALSE,
+        drawPoints = TRUE,
+        pointSize = 3
+      )
+      
+    
   })
   
   output$historicScoresCourseStatistics <- renderDygraph({
