@@ -57,12 +57,9 @@ ui <- dashboardPage(
         infoBoxOutput("last4GamesAverageShots", width = 2)
         
       ),
-      fluidRow(box(
-        tableOutput("historicCards"),
-        title = "Historic Cards",
-        width = 12
-      ))
-      
+      fluidRow(
+        box(dygraphOutput("parsPerGame"), width = 4)
+      )
     ),
     # Course Statistics Tab -----------------------------------------------------
     tabItem(
@@ -210,19 +207,26 @@ server <- function(input, output) {
       mutate(date = as.character(date)),
     width = "100%")
   
+  output$parsPerGame <- renderDygraph({
+    cards %>% 
+      left_join(courses) %>% 
+      mutate(made_par = ifelse(shots == par,1,0)) %>% 
+      group_by(id_game, date) %>% 
+      summarise(cant_par = sum(made_par, na.rm = TRUE)) %>%
+      xts(x = .$cant_par, order.by = .$date) %>%
+      dygraph(main = "Pars per Game") %>%
+      dySeries("V1", label = "Pars") %>%
+      dyAxis("y", label = "Pars", valueRange = c(0, 18)) %>%
+      dyOptions(
+        axisLineWidth = 1.5,
+        fillGraph = TRUE,
+        drawGrid = FALSE,
+        drawPoints = TRUE,
+        pointSize = 3
+      )
+  })
   
-  output$historicCards <- renderTable(
-    cards %>%
-      mutate(date = as.character(date),
-             shots = as.integer(ifelse(
-               is.na(shots), 0, shots
-             ))) %>%
-      spread(hole, shots, sep = "_") %>%
-      mutate(total_shots = rowSums(select_if(., is.numeric), na.rm = TRUE)),
-    width = "100%"
-  )
-  
-  # Course Statistics Tab -----------------------------------------------------
+   # Course Statistics Tab -----------------------------------------------------
   
   courseData <- reactive({
     courseData <- cards %>%
