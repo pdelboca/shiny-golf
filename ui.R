@@ -10,7 +10,7 @@ library(ggplot2)
 library(leaflet)
 library(shinydashboardPlus)
 library(zoo)
-library(rsconnect)
+library(geosphere)
 
 source("./watchpos.R")
 source("data/golf_data.R")
