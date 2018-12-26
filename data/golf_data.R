@@ -33,3 +33,12 @@ get_course_location <- function(){
 }
 
 courses_location <-get_course_location()
+
+get_holes_points <- function(){
+  gs_title("datos_golf") %>%
+    gs_read("holes_points") %>%
+    select(course, hole, lat, lon) %>%
+    mutate(course = as.character(course))
+}
+
+holes_points <- get_holes_points()

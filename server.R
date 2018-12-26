@@ -1,113 +1,5 @@
-library(shiny)
-library(shinydashboard)
-library(dygraphs)
-library(xts)
-library(googlesheets)
-library(dplyr)
-library(tidyr)
-library(lubridate)
-library(ggplot2)
-library(leaflet)
-library(shinydashboardPlus)
-library(zoo)
-
-source("data/golf_data.R")
-
-ui <- dashboardPage(
-  dashboardHeader(title = "Personal Golf Statistics"),
-  dashboardSidebar(sidebarMenu(
-    menuItem(
-      "Historic Data",
-      tabName = "historicData",
-      icon = icon("dashboard")
-    ),
-    menuItem(
-      "Course Statistics",
-      tabName = "courseStatistics",
-      icon = icon("th")
-    )
-  )),
-  dashboardBody(tabItems(
-    # Historic Data Tab -----------------------------------------------------
-    tabItem(
-      tabName = "historicData",
-      fluidRow(
-        valueBoxOutput("totalGames", width = 2),
-        valueBoxOutput("totalHoles", width = 2),
-        valueBoxOutput("totalShots", width = 2),
-        valueBoxOutput("avgShots9Holes", width = 2),
-        valueBoxOutput("avgShots18Holes", width = 2),
-        valueBoxOutput("daysSince", width = 2)
-      ),
-      fluidRow(
-        box(dygraphOutput("historicScores9Holes"), width = 4),
-        box(dygraphOutput("historicScores18Holes"), width = 4),
-        box(
-          tableOutput("historicTable"),
-          title = "Last 10 Games",
-          width = 4
-        )
-      ),
-      fluidRow(
-        box(
-          title="2018 Goals", width = 4,
-          "My goal for 2018 is to play 4 matches on a row without any 10 on the card."
-        ),
-        infoBoxOutput("goalFulfilled", width = 2),
-        infoBoxOutput("last4GamesAverageShots", width = 2)
-        
-      ),
-      fluidRow(
-        box(dygraphOutput("parsPerGame"), width = 4)
-      )
-    ),
-    # Course Statistics Tab -----------------------------------------------------
-    tabItem(
-      tabName = "courseStatistics",
-      fluidRow(box(
-        selectInput("courseInput", "Select Course:", courses$course, selected = "ALL"),
-        width = 2
-      ),
-      box(leafletOutput("courseMap"),title = "Course Map", width = 5),
-      gradientBox(
-        title = "Course Historic Games",
-        boxToolSize = "sm",
-        width = 5,
-        collapsible = FALSE,
-        footer = column(
-          width = 12,
-          align = "center",
-          radioButtons(
-            "holesCourseInput",
-            "Holes Played:",
-            choices = list(9, 18)
-          )
-        ),
-        dygraphOutput("historicScoresCourseStatistics")
-      )
-      ),
-      fluidRow(
-        valueBoxOutput("courseTotalGames", width = 2),
-        valueBoxOutput("courseTotalHoles", width = 2),
-        valueBoxOutput("courseTotalShots", width = 2),
-        valueBoxOutput("courseAvgShots9Holes", width = 2),
-        valueBoxOutput("courseAvgShots18Holes", width = 2),
-        valueBoxOutput("courseDaysSince", width = 2)
-      ),
-      fluidRow(
-        box(radioButtons("holeInput", choices = unique(courses$hole), label = "Select Course Hole: ", inline = TRUE),width = 12)
-      ),
-      fluidRow(
-        box(dygraphOutput("holeStrokesHistory"), width = 6)
-      ),
-      fluidRow(box(
-        plotOutput("historicDispersion"), width = 12
-      ))
-    )
-  ))
-)
-
-server <- function(input, output) {
+shinyServer(
+  function(input, output, session) {
   # Historic Data Tab -----------------------------------------------------
   output$totalGames <- renderValueBox({
     valueBox(length(unique(cards$date)), "Games Played")
@@ -232,7 +124,7 @@ server <- function(input, output) {
       )
   })
   
-   # Course Statistics Tab -----------------------------------------------------
+  # Course Statistics Tab -----------------------------------------------------
   
   courseData <- reactive({
     courseData <- cards %>%
@@ -300,7 +192,7 @@ server <- function(input, output) {
     leaflet() %>%
       addProviderTiles(providers$Esri.WorldImagery) %>%
       addMarkers(lng=coursesLocation()$lon, lat=coursesLocation()$lat, popup=coursesLocation()$course)
-      #setView(lng=coursesLocation()$lon, lat=coursesLocation()$lat, zoom = 16)
+    #setView(lng=coursesLocation()$lon, lat=coursesLocation()$lat, zoom = 16)
   })
   
   output$holeStrokesHistory <- renderDygraph({
@@ -327,13 +219,13 @@ server <- function(input, output) {
         drawPoints = TRUE,
         pointSize = 3
       )
-      
+    
     
   })
   
   output$historicScoresCourseStatistics <- renderDygraph({
     holes_played_input <- as.integer(input$holesCourseInput)
-
+    
     courseData() %>%
       group_by(date, course, holes_played) %>% # TODO: Review if multiple matchs in 1 day
       summarise(total = sum(shots, na.rm = TRUE)) %>%
@@ -350,8 +242,55 @@ server <- function(input, output) {
         pointSize = 3
       )
     
+    # Distance to Hole -------------------------------------------
+    output$courseMapDistance <- renderLeaflet({
+      leaflet() %>% 
+        addProviderTiles("Esri.WorldImagery")
+    })
+    
+    observe({
+      if(!is.null(input$lat)){
+        
+        point_lat <- holes_points[holes_points$hole == input$holeInputDistance & holes_points$course == input$courseInputDistance, ]$lat
+        point_lon <- holes_points[holes_points$hole == input$holeInputDistance & holes_points$course == input$courseInputDistance, ]$lon
+        
+        lat <- input$lat
+        lng <- input$long
+        #lat <- -31.645453
+        #lng <- -64.446854
+        acc <- input$accuracy
+        time <- input$time
+        
+        proxy <- leafletProxy("courseMapDistance")
+        
+        proxy  %>% 
+          clearGroup(group=c("pos","hole")) %>% 
+          addMarkers(lng=lng, lat=lat, popup=paste("My location is:","<br>",
+                                                   lng,"Longitude","<br>",
+                                                   lat,"Latitude", "<br>",
+                                                   "My accuracy is:",  "<br>",
+                                                   acc, "meters"),
+                     group="pos") %>%
+          addCircles(lng=lng, lat=lat, radius=acc, group="pos") %>%
+          addMarkers(lng = point_lon, lat=point_lat, group = "hole") %>% 
+          setView(lng=lng, lat=lat, zoom = 16)
+      }
+      
+      output$distance <- renderText({
+        point_lat <- holes_points[holes_points$hole == input$holeInputDistance & holes_points$course == input$courseInputDistance, ]$lat
+        point_lon <- holes_points[holes_points$hole == input$holeInputDistance & holes_points$course == input$courseInputDistance, ]$lon
+        lat <- input$lat
+        lng <- input$long
+        # lat <- -31.645453
+        # lng <- -64.446854
+        paste("Distance to Hole",
+              input$holeInputDistance,
+              ":",
+              round(distm(c(lng, lat), c(point_lon, point_lat), fun = distHaversine) * 1.09361,2),
+              "yards.")
+      })
+      
+    })
   })
 }
-
-# Run the app ----
-shinyApp(ui = ui, server = server)
+)
