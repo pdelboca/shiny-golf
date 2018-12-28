@@ -35,7 +35,7 @@ watchpos <- tags$script('
                         }
                         }
                         
-                        var TIMEOUT = 3000; //SPECIFY
+                        var TIMEOUT = 5000; //SPECIFY
                         var started = false;
                         function getLocationRepeat(){
                         //first time only - no delay needed

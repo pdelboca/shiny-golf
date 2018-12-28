@@ -40,7 +40,7 @@ shinyUI(
     # Historic Data Tab -----------------------------------------------------
     tabItem(
       tabName = "historicData",
-      fluidRow(watchpos,
+      fluidRow(
         valueBoxOutput("totalGames", width = 2),
         valueBoxOutput("totalHoles", width = 2),
         valueBoxOutput("totalShots", width = 2),
@@ -118,7 +118,7 @@ shinyUI(
       tabName = "distanceToHole",
       fluidRow(
       column(2, 
-             fluidRow(
+             fluidRow(watchpos,
                box(selectInput("courseInputDistance", "Select Course:", courses$course, selected = "ALL"), width = 12)),
       fluidRow(box(radioButtons("holeInputDistance", choices = unique(courses$hole), label = "Select Course Hole: "), width = 12))
       ),

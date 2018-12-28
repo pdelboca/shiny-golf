@@ -192,7 +192,6 @@ shinyServer(
     leaflet() %>%
       addProviderTiles(providers$Esri.WorldImagery) %>%
       addMarkers(lng=coursesLocation()$lon, lat=coursesLocation()$lat, popup=coursesLocation()$course)
-    #setView(lng=coursesLocation()$lon, lat=coursesLocation()$lat, zoom = 16)
   })
   
   output$holeStrokesHistory <- renderDygraph({
@@ -241,6 +240,8 @@ shinyServer(
         drawPoints = TRUE,
         pointSize = 3
       )
+    })
+    
     
     # Distance to Hole -------------------------------------------
     output$courseMapDistance <- renderLeaflet({
@@ -274,6 +275,7 @@ shinyServer(
           addCircles(lng=lng, lat=lat, radius=acc, group="pos") %>%
           addMarkers(lng = point_lon, lat=point_lat, group = "hole") %>% 
           setView(lng=lng, lat=lat, zoom = 16)
+
       }
       
       output$distance <- renderText({
@@ -286,11 +288,11 @@ shinyServer(
         paste("Distance to Hole",
               input$holeInputDistance,
               ":",
-              round(distm(c(lng, lat), c(point_lon, point_lat), fun = distHaversine) * 1.09361,2),
+              round(distm(c(lng, lat), c(point_lon, point_lat), fun = distVincentyEllipsoid) * 1.09361,2),
+              "yards. Accuracy:",
+              round(acc * 1.09361, 2),
               "yards.")
       })
       
     })
   })
-}
-)
