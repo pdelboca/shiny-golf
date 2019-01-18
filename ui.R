@@ -89,7 +89,7 @@ shinyUI(
           radioButtons(
             "holesCourseInput",
             "Holes Played:",
-            choices = list(9, 18)
+            choices = unique(cards$holes_round)
           )
         ),
         dygraphOutput("historicScoresCourseStatistics")

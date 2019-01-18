@@ -3,7 +3,10 @@ get_cards <- function(){
   tidy_cards <- gs_title("datos_golf") %>%
     gs_read("cards") %>%
     mutate(id_game = row_number()) %>%
-    select(id_game, "date":"18") %>%
+    select(id_game, "date":"18") %>% 
+    mutate(holes_round = case_when(!is.na(`1`) & !is.na(`18`) ~ "18 Holes",
+                                   !is.na(`1`)  ~ "First 9",
+                                   !is.na(`18`) ~ "Back 9")) %>%  
     gather("hole", "shots", "1":"18") %>%
     mutate(date = dmy(date),
            hole = as.numeric(hole)) %>%

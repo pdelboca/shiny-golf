@@ -223,16 +223,16 @@ shinyServer(
   })
   
   output$historicScoresCourseStatistics <- renderDygraph({
-    holes_played_input <- as.integer(input$holesCourseInput)
+    holes_round_input <- input$holesCourseInput
     
     courseData() %>%
-      group_by(date, course, holes_played) %>% # TODO: Review if multiple matchs in 1 day
+      group_by(date, course, holes_round) %>% # TODO: Review if multiple matchs in 1 day
       summarise(total = sum(shots, na.rm = TRUE)) %>%
-      filter(holes_played == holes_played_input) %>%
+      filter(holes_round == holes_round_input) %>%
       xts(x = .$total, order.by = .$date) %>%
-      dygraph(main = paste("Total Scores per Game (for", holes_played_input, "Holes)")) %>%
+      dygraph(main = paste0("Total Scores per Game (", holes_round_input, ")")) %>%
       dySeries("V1", label = "Score") %>%
-      dyAxis("y", label = "Score (Total Hits)", valueRange = c(0, holes_played_input * 10)) %>%
+      dyAxis("y", label = "Score (Total Hits)", valueRange = c(0, -Inf)) %>% # Assign NULL to upper range casues lower to be calculated. Bug?
       dyOptions(
         axisLineWidth = 1.5,
         fillGraph = TRUE,
